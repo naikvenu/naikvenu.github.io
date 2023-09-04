@@ -30,9 +30,17 @@ twitter_username: jekyllrb
 github_username:  jekyll
 
 # Build settings
-theme: just-the-docs
+theme: minima
 plugins:
-  - jekyll-default-layout
+  - jekyll-feed
+  - jekyll-toc
+
+toc:
+ min_level: 1
+ max_level: 3
+ list_class: toc
+ list_class: toc__list
+ sublist_class: toc__sublist
 
 # Exclude from processing.
 # The following items will not be processed, by default.
