@@ -1,16 +1,25 @@
 ---
 title: My Page Title
 nav: index page1 page2
+navMenu: true
 toc: true
 ---
 
-# Heading 1
+# cloudsolutions.github.io
 
-## heading 1.1
+dlkjsdklf
 
 
-# Heading 2
+## sub
+
+# fsdfds
 
 <code>
-dsfdsg
-<code>
+fgfdklglfdg
+</code>
+
+```python
+def:
+    a = 1 +2 
+    print (a)
+```
