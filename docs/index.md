@@ -1,30 +1,45 @@
----
-title: My Page Title
-nav: index page1 page2
-navMenu: true
-toc: true
----
+{:toc}
 
-# cloudsolutions.github.io
+<style>
+    .sidenav {
+        height: 100%;
+        width: 200px; /* Adjust the width as needed */
+        position: fixed;
+        z-index: 1;
+        top: 0;
+        left: 0;
+        background-color: #f0f0f0; /* Adjust the background color */
+        padding-top: 20px;
+    }
 
-dlkjsdklf
+    .sidenav a {
+        padding: 10px 15px;
+        text-decoration: none;
+        font-size: 16px;
+        color: #333; /* Adjust the link color */
+        display: block;
+    }
+
+    .sidenav a:hover {
+        background-color: #ddd; /* Adjust the hover background color */
+    }
+</style>
 
 
-## sub
+<div class="sidenav">
+    <a href="#section1">Section 1</a>
+    <a href="#section2">Section 2</a>
+    <a href="#section3">Section 3</a>
+</div>
 
-# fsdfds
+<h2 id="section1">Section 1</h2>
+<!-- Your content for Section 1 -->
 
-<code>
-fgfdklglfdg
-</code>
+<h2 id="section2">Section 2</h2>
+<!-- Your content for Section 1 -->
 
-```python
-def:
-    a = 1 +2 
-    print (a)
-```
-
-
+<h2 id="section3">Section 3</h2>
+<!-- Your content for Section 1 -->
 
 <a name="introduction"></a>
 # Introduction
@@ -44,7 +59,6 @@ def:
 <a name="subsection2.2"></a>
 ### Subsection 2.2
 
-* TOC
-{:toc}
+
 
 
