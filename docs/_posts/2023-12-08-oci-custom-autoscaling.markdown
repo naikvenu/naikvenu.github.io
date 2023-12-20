@@ -4,7 +4,7 @@ title:  "Oracle Cloud Infrastructure (OCI) Custom Metric-based Autoscaling using
 date:   2023-12-08 11:59:25 +1100
 categories: OCI Autoscaling
 author: Venugopal Naik
-avatar: ../../../../../../observability/images/profile.png
+avatar: ../../../../../../images/profile.png
 ---
 
 This document provides a detailed guide for implementing Custom Metric-based Autoscaling using Serverless Functions. 
@@ -14,7 +14,7 @@ While OCI Autoscaling inherently allows for automatic adjustments of compute ins
 This approach ensures adaptability to unique requirements, enabling efficient scaling decisions tailored to specific application needs, complementing the default autoscaling capabilities provided by OCI.
 
 
-![Architecture](../../../../../../observability/images/arch.png)
+![Architecture](../../../../../../images/arch.png)
 
 
 1. As per the architecture, we will use Oracle Linux 8 image and install and configure all the required dependencies using a cloud-init script supplied with this repository.
@@ -46,7 +46,7 @@ Create a new bucket named ‘artifacts’ and add the following packages:
 
 The artifacts bucket after uploading all the required packages would look like this:
 
-![ObjectStorage](../../../../../../observability/images/obj.png)
+![ObjectStorage](../../../../../../images/obj.png)
 
 <h1>INSTANCE POOL</h1>
 
@@ -65,7 +65,7 @@ http://Load-Balancer-IP
 
 You should see an output like this:
 
->![Output](../../../../../../observability/images/output.png)
+>![Output](../../../../../../images/output.png)
 
 <h1>DEPLOY OCI SERVERLESS FUNCTION</h1>
 
