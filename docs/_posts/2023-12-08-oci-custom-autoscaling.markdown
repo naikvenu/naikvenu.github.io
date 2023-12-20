@@ -13,26 +13,32 @@ While OCI Autoscaling inherently allows for automatic adjustments of compute ins
 
 This approach ensures adaptability to unique requirements, enabling efficient scaling decisions tailored to specific application needs, complementing the default autoscaling capabilities provided by OCI.
 
+We will use Apache metrics in this demonstration.
+
 
 ![Architecture](../../../../../../images/arch.png)
 
 
 1. As per the architecture, we will use Oracle Linux 8 image and install and configure all the required dependencies using a cloud-init script supplied with this repository.
-2. We will need to create an instance configuration and supply a cloud init script when promped under Advance Configuration options.
-3. The cloud init script will perform management agent installation, installation of required exporters, configuring mgmt agent to scrape prometheus metrics exposed by exporters.
+2. We will need to create an instance configuration and supply a cloud init script when prompted under Advance Configuration options.
+3. The cloud init script will perform management agent installation, installation of required exporters (Apache and Node exporters), configures mgmt agent to scrape prometheus metrics exposed by exporters.
 4. Using the OCI console we will then define an Alarm rule to be triggered based on the custom metric threshold.
 5. We shall create a Serverless Functions app using the OCI console and deploy 2 functions: scale-out and scale-in. Also, configure the required parameters.
-6. Create 2 notification topics: One for scale out and the other for scale in. scale-out Function subscribers to scale-out topic and scale-in to scale-in topic.
+6. Create 2 notification topics: One for scale out and the other for scale in. scale-out Fn subscribes to scale-out topic and scale-in Fn subscribes to scale-in topic.
 
 <b>High level Flow:</b> When the custom metric 'apache_accesses_total' rate per minute (in short, the requests per minute) crosses the threshold mark a trigger would be sent to notifications and the function is invoked. The function does required checks before scaling.
 
 The following <b>steps</b> walks through the details of the implementation:
 
+<h1>PRE-REQUISITES</h1>
+
+Before you start clone [this](https://github.com/naikvenu/autoscaling/blob/main/apache_cloud_init.sh) repository.
+
 <h1>INSTANCE CONFIGURATION</h1>
 
 Firstly, create an instance configuration using [these](https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/creatinginstanceconfig.htm) instructions.
 
-> Note: Select Oracle Linux 8 as your image, add your ssh keys and click advanced options to add apache_cloud_init.sh script from [this](https://github.com/naikvenu/autoscaling/blob/main/apache_cloud_init.sh) repository.
+> Note: Select Oracle Linux 8 as your image, add your ssh keys and click advanced options to add apache_cloud_init.sh script.
 
 <h1>PREPARE YOUR OBJECT STORAGE BUCKET</h1>
 
@@ -78,8 +84,6 @@ Follow the instructions on the screen. Use <b>Generic_X86</b> as the shape of th
 Reference [doc](https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionscreatingapps.htm)
 
 Click on getting started tab and follow `'Setup fn CLI on Cloud Shell'`. Open Cloud shell and perform the steps as per the instructions.
-
-Clone or Copy [this](https://github.com/naikvenu/autoscaling) repository from cloud shell: 
 
 {% highlight linux %}
 $ cd scale-out-Fn
