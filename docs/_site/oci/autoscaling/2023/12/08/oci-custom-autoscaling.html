@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Oracle Cloud Infrastructure (OCI) Custom Metric-based Autoscaling using Serverless Functions | Observability Corner</title>
+<meta name="generator" content="Jekyll v4.3.2" />
+<meta property="og:title" content="Oracle Cloud Infrastructure (OCI) Custom Metric-based Autoscaling using Serverless Functions" />
+<meta name="author" content="Venugopal Naik" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="This document provides a detailed guide for implementing Custom Metric-based Autoscaling using Serverless Functions." />
+<meta property="og:description" content="This document provides a detailed guide for implementing Custom Metric-based Autoscaling using Serverless Functions." />
+<link rel="canonical" href="http://localhost:4000/observability/oci/autoscaling/2023/12/08/oci-custom-autoscaling.html" />
+<meta property="og:url" content="http://localhost:4000/observability/oci/autoscaling/2023/12/08/oci-custom-autoscaling.html" />
+<meta property="og:site_name" content="Observability Corner" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-12-08T06:29:25+05:30" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Oracle Cloud Infrastructure (OCI) Custom Metric-based Autoscaling using Serverless Functions" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Venugopal Naik"},"dateModified":"2023-12-08T06:29:25+05:30","datePublished":"2023-12-08T06:29:25+05:30","description":"This document provides a detailed guide for implementing Custom Metric-based Autoscaling using Serverless Functions.","headline":"Oracle Cloud Infrastructure (OCI) Custom Metric-based Autoscaling using Serverless Functions","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/observability/oci/autoscaling/2023/12/08/oci-custom-autoscaling.html"},"url":"http://localhost:4000/observability/oci/autoscaling/2023/12/08/oci-custom-autoscaling.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/observability/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/observability/feed.xml" title="Observability Corner" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/observability/">Observability Corner</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Oracle Cloud Infrastructure (OCI) Custom Metric-based Autoscaling using Serverless Functions</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-12-08T06:29:25+05:30" itemprop="datePublished">Dec 8, 2023
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">Venugopal Naik</span></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>This document provides a detailed guide for implementing Custom Metric-based Autoscaling using Serverless Functions.</p>
+
+<p>While OCI Autoscaling inherently allows for automatic adjustments of compute instances in an instance pool based on default metrics like CPU and Memory utilization, there might be scenarios where customizations are necessary. In cases where scaling decisions are based on application-specific metrics (custom metrics), this documentation offers a specialized approach that deviates from the out-of-the-box features.</p>
+
+<p>This approach ensures adaptability to unique requirements, enabling efficient scaling decisions tailored to specific application needs, complementing the default autoscaling capabilities provided by OCI.</p>
+
+<p><img src="../../../../../../observability/images/arch.png" alt="Architecture" /></p>
+
+<ol>
+  <li>As per the architecture, we will use Oracle Linux 8 image and install and configure all the required dependencies using a cloud-init script supplied with this repository.</li>
+  <li>We will need to create an instance configuration and supply a cloud init script when promped under Advance Configuration options.</li>
+  <li>The cloud init script will perform management agent installation, installation of required exporters, configuring mgmt agent to scrape prometheus metrics exposed by exporters.</li>
+  <li>Using the OCI console we will then define an Alarm rule to be triggered based on the custom metric threshold.</li>
+  <li>We shall create a Serverless Functions app using the OCI console and deploy 2 functions: scale-out and scale-in. Also, configure the required parameters.</li>
+  <li>Create 2 notification topics: One for scale out and the other for scale in. scale-out Function subscribers to scale-out topic and scale-in to scale-in topic.</li>
+</ol>
+
+<p><b>High level Flow:</b> When the custom metric ‘apache_accesses_total’ rate per minute (in short, the requests per minute) crosses the threshold mark a trigger would be sent to notifications and the function is invoked. The function does required checks before scaling.</p>
+
+<p>The following <b>steps</b> walks through the details of the implementation:</p>
+
+<h1>INSTANCE CONFIGURATION</h1>
+
+<p>Firstly, create an instance configuration using <a href="https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/creatinginstanceconfig.htm">these</a> instructions.</p>
+
+<blockquote>
+  <p>Note: Select Oracle Linux 8 as your image, add your ssh keys and click advanced options to add apache_cloud_init.sh script from <a href="https://github.com/naikvenu/autoscaling/blob/main/apache_cloud_init.sh">this</a> repository.</p>
+</blockquote>
+
+<h1>PREPARE YOUR OBJECT STORAGE BUCKET</h1>
+
+<p>The apache cloud init script refers to an object storage bucket named ‘artifacts’ to download all the packages.
+Create a new bucket named ‘artifacts’ and add the following packages:</p>
+
+<ol>
+  <li>Management Agent RPM (Package). It can be found on OCI Console -&gt; Management Agent -&gt; Download Agent RPM , Rename it to oracle.mgmt_agent.rpm</li>
+  <li>Create a new Management Agent Data Key and download key to file and name it as input.rsp and add it to artifacts bucket.</li>
+  <li>Download <a href="https://github.com/Lusitaniae/apache_exporter/releases/download/v1.0.3/apache_exporter-1.0.3.linux-386.tar.gz">Apache exporter</a> , extract the executable and add it to the bucket.</li>
+  <li>Download <a href="https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-386.tar.gz">Node exporter</a> , extract the executable and add it to the bucket.</li>
+</ol>
+
+<p>The artifacts bucket after uploading all the required packages would look like this:</p>
+
+<p><img src="../../../../../../observability/images/obj.png" alt="ObjectStorage" /></p>
+
+<h1>INSTANCE POOL</h1>
+
+<p>Create an instance pool using the instance configuration created in the previous step. Refer <a href="https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/creatinginstancepool.htm">this</a> document if required. 
+Select a size of 2 as this is minimum required by the scaling function.</p>
+
+<h1>ATTACH OCI LOAD BALANCER</h1>
+
+<p>Follow the steps provided <a href="https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/updatinginstancepool_topic-To_attach_a_load_balancer_to_an_instance_pool.htm">here</a> to attach a load balancer to your instance pool.</p>
+
+<h1>ACCESS THE APPLICATION</h1>
+
+<p>On your browser access the application using load balancer or instance public IP</p>
+
+<p>http://Load-Balancer-IP</p>
+
+<p>You should see an output like this:</p>
+
+<blockquote>
+  <p><img src="../../../../../../observability/images/output.png" alt="Output" /></p>
+</blockquote>
+
+<h1>DEPLOY OCI SERVERLESS FUNCTION</h1>
+
+<p>Create Serverless Functions Application:</p>
+
+<p>In the <code class="language-plaintext highlighter-rouge">OCI Console -&gt; open the navigation menu and click Developer Services -&gt; Under Functions, click Applications and Create Application</code></p>
+
+<p>Follow the instructions on the screen. Use <b>Generic_X86</b> as the shape of the Fn.</p>
+
+<p>Reference <a href="https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionscreatingapps.htm">doc</a></p>
+
+<p>Click on getting started tab and follow <code class="language-plaintext highlighter-rouge">'Setup fn CLI on Cloud Shell'</code>. Open Cloud shell and perform the steps as per the instructions.</p>
+
+<p>Clone or Copy <a href="https://github.com/naikvenu/autoscaling">this</a> repository from cloud shell:</p>
+
+<figure class="highlight"><pre><code class="language-linux" data-lang="linux">$ cd scale-out-Fn
+$ fn list apps
+$ fn -v deploy --app &lt;app-name&gt;    
+$ cd scale-in-Fn
+$ fn list apps
+$ fn -v deploy --app &lt;app-name&gt;</code></pre></figure>
+
+<p>Configure Functions Application:</p>
+
+<figure class="highlight"><pre><code class="language-linux" data-lang="linux">INSTANCE_POOL_INCREMENT_SIZE 2
+INSTANCE_POOL_MIN_SIZE	1	
+INSTANCE_POOL_MAX_SIZE	10
+INSTANCE_POOL_ID  &lt;pool-id&gt;</code></pre></figure>
+
+<p>Configure Functions Logs:</p>
+
+<p><code class="language-plaintext highlighter-rouge">Under Functions -&gt; Click on logs and enable logging</code> Select or create a new log group and log name as per instructions.</p>
+
+<h1>CREATE NOTIFICATIONS TOPIC</h1>
+
+<p><b>Scale Out Topic</b></p>
+
+<p><code class="language-plaintext highlighter-rouge">OCI console -&gt; OCI Notifications -&gt; Create scale-out topic.</code>
+Add Subscription as scale-out Function created from previous step.</p>
+
+<p><b>Scale In Topic</b></p>
+
+<p><code class="language-plaintext highlighter-rouge">OCI console -&gt; OCI Notifications -&gt; Create scale-in topic.</code>
+Add Subscription as scale-in Function created from previous step.</p>
+
+<h1>ALARM DEFINITIONS </h1>
+
+<p>At this point you shall see the metrics flowing through to OCI monitoring. Check the following:</p>
+
+<p><code class="language-plaintext highlighter-rouge">OCI console -&gt; OCI monitoring -&gt; Metrics Explorer -&gt; apache_mod_stats (namespace) -&gt; apache_accesses_total (metric)</code> and check if you see the data points.</p>
+
+<p>If yes, then proceed to creating Alarm definitions.</p>
+
+<p><b>Scale-out Alarm</b></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a. OCI console -&gt; OCI monitoring -&gt; Create scale-out Alarm. 
+b. Choose apache_mod_stats (namespace) -&gt; apache_accesses_total (metric) -&gt; Statistics as rate of change.
+c. Choose 5 minute intervals.
+c. Choose a threshold value of 500 for the testing.
+d. Select target as scale-out notification topic.
+</code></pre></div></div>
+
+<p><b>Scale-in Alarm</b></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a. OCI console -&gt; OCI monitoring -&gt; Create scale-in Alarm. 
+b. Choose apache_mod_stats (namespace) -&gt; apache_accesses_total (metric) -&gt; Statistics as rate of change.
+c. Choose 5 minute intervals.
+d. Choose a threshold value of 100 for the testing.
+e. Select target as scale-in notification topic.
+</code></pre></div></div>
+
+<h1>TEST SCALING</h1>
+
+<p>For load testing, create another instance and call it load generator</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ sudo dnf install -y httpd
+</code></pre></div></div>
+
+<p>We can use apache benchmark tool to introduce some load:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ ab -n 5000 -c 50 http://Load-Balancer-IP:80/index.php
+
+-n indicates the number of requests
+-c is the concurrency
+</code></pre></div></div>
+
+<p>Observe the instance pool scaling operations. Optionally, we can also check Functions logs and verify the details of the scaling operation.</p>
+
+<blockquote>
+  <p>Note: It is advised to please test this solution fully using a load testing <br />
+        tool before using it in production.</p>
+</blockquote>
+
+<hr />
+<p><br />
+** Disclaimer: I work for Oracle and the views expressed on this documentation are my own and do not necessarily reflect the views of Oracle. **</p>
+
+<p><img src="" alt="" class="author-photo" /></p>
+
+
+  </div><a class="u-url" href="/observability/oci/autoscaling/2023/12/08/oci-custom-autoscaling.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/observability/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Observability Corner</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Observability Corner</li><li><a class="u-email" href="mailto:venunivaan@gmail.com">venunivaan@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/naikvenu"><svg class="svg-icon"><use xlink:href="/observability/assets/minima-social-icons.svg#github"></use></svg> <span class="username">naikvenu</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Blogs on Oracle Cloud Infrastructure Observability &amp; Management</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
